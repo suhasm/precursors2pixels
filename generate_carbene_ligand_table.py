@@ -38,30 +38,31 @@ def n_arylation(imidazole_smiles, halide_smiles):
 
     return set(products)
 
+if __name__ == '__main__':
 
-result_data = []  # List to store the data
+    result_data = []  # List to store the data
 
-for _, halide_row in tqdm(halide_df.iterrows(), total=len(halide_df)):
-    for _, imidazole_row in imidazoles_df.iterrows():
-        ligand_set = n_arylation(imidazole_row["imidazole_SMILES"], halide_row["halide_SMILES"])
+    for _, halide_row in tqdm(halide_df.iterrows(), total=len(halide_df)):
+        for _, imidazole_row in imidazoles_df.iterrows():
+            ligand_set = n_arylation(imidazole_row["imidazole_SMILES"], halide_row["halide_SMILES"])
 
-        # If the set is empty, do nothing
-        if not ligand_set:
-            continue
+            # If the set is empty, do nothing
+            if not ligand_set:
+                continue
 
-        # Convert each ligand in the set to a row in the DataFrame and append to the list
-        for i, ligand in enumerate(ligand_set):
-            ligand_identifier = halide_row["halide_identifier"] + imidazole_row["imidazole_identifier"] + 'L' + hex(i)[2:]
-            result_data.append({
-                "ligand_identifier": ligand_identifier,
-                "ligand_SMILES": ligand,
-                "halide_identifier": halide_row["halide_identifier"],
-                "halide_SMILES": halide_row["halide_SMILES"],
-                "imidazole_identifier": imidazole_row["imidazole_identifier"],
-                "imidazole_SMILES": imidazole_row["imidazole_SMILES"]
-            })
+            # Convert each ligand in the set to a row in the DataFrame and append to the list
+            for i, ligand in enumerate(ligand_set):
+                ligand_identifier = halide_row["halide_identifier"] + imidazole_row["imidazole_identifier"] + 'L' + hex(i)[2:]
+                result_data.append({
+                    "ligand_identifier": ligand_identifier,
+                    "ligand_SMILES": ligand,
+                    "halide_identifier": halide_row["halide_identifier"],
+                    "halide_SMILES": halide_row["halide_SMILES"],
+                    "imidazole_identifier": imidazole_row["imidazole_identifier"],
+                    "imidazole_SMILES": imidazole_row["imidazole_SMILES"]
+                })
 
-# Create the DataFrame using the list of data
-result_df = pd.DataFrame(result_data)
+    # Create the DataFrame using the list of data
+    result_df = pd.DataFrame(result_data)
 
-result_df.to_csv("output_data/combinatorial_carbene_ligands.csv.gz", index=False)
+    result_df.to_csv("output_data/combinatorial_carbene_ligands.csv.gz", index=False)
