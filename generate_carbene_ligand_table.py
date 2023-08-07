@@ -4,7 +4,6 @@ from rdkit.Chem import AllChem
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import rdqueries
-import mols2grid
 
 halides_file_name = 'aromatic_halides_with_id.csv'
 imidazoles_file_name = 'imidazoles_with_id.csv'
@@ -25,7 +24,8 @@ def n_arylation(imidazole_smiles, halide_smiles):
 
     # Define n-arylation coupling reaction using reaction SMARTS
     # The carbene atom has to be non-aromatic. Otherwise you get a kekulize error.
-    n_arylation_rxn_smarts = '[cH:1][c:2](-[I,Br,Cl,F:3])[c:4].[nX2:5][cH1:6][n:7]>>*-[cH:1][cH0:2](-[n:5][C:6](->*)[n:7])[c:4].[I,Br,Cl,F:3]'
+    # Furthermore, it needs to be marked as having no Hs, or it will have an implicit H
+    n_arylation_rxn_smarts = '[cH:1][c:2](-[I,Br,Cl,F:3])[c:4].[nX2:5][cH1:6][n:7]>>[c:1](-*):[cH0:2](-[N:5]-[CH0:6](->*)-[N:7]):[c:4].[I,Br,Cl,F:3]'
     n_arylation_rxn = AllChem.ReactionFromSmarts(n_arylation_rxn_smarts)
 
     # Perform the reaction
@@ -34,7 +34,14 @@ def n_arylation(imidazole_smiles, halide_smiles):
     # Collect the products and convert them to SMILES
     products = []
     for product in product_set:
-        products.append(Chem.MolToSmiles(product[0], isomericSmiles=False))
+        ligand = product[0]
+        # Sanitize before adding. Errors indicate violations of the aromaticity model
+        try:
+            AllChem.SanitizeMol(ligand)
+            Chem.MolToSmiles(ligand, isomericSmiles=False)
+            products.append(ligand)
+        except AllChem.KekulizeException:
+            print(f"Could not sanitize combination of:\n{imidazole_smiles}\nwith\n{halide_smiles}")
 
     return set(products)
 
