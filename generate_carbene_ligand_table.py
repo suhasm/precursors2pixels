@@ -43,7 +43,7 @@ def n_arylation(imidazole_smiles, halide_smiles):
         except AllChem.KekulizeException:
             print(f"Could not sanitize combination of:\n{imidazole_smiles}\nwith\n{halide_smiles}")
 
-    return set(products)
+    return set(Chem.MolToSmiles(product) for product in products)
 
 if __name__ == '__main__':
 
