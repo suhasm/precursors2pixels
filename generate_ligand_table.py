@@ -4,12 +4,7 @@ from rdkit.Chem import AllChem
 from rdkit import Chem
 from rdkit.Chem import Descriptors
 from rdkit.Chem import rdqueries
-
-halides_file_name = 'aromatic_halides_with_id.csv'
-acids_file_name = 'aromatic_boronic_acids_with_id.csv'
-
-halide_df = pd.read_csv('input_data/' + halides_file_name)
-acid_df = pd.read_csv('input_data/' + acids_file_name)
+import os
 
 
 def suzuki_couple(boronic_acid_smiles, halide_smiles):
@@ -25,7 +20,7 @@ def suzuki_couple(boronic_acid_smiles, halide_smiles):
     # Define Suzuki coupling reaction using reaction SMARTS
     # suzuki_coupling_rxn_smarts = '[c:1][X:4].[c:2][B:5]([OH:6])[OH:7]>>[c:1][c:2].[X:4].[OH:6].[OH:7]'
     # suzuki_coupling_rxn_smarts = '[n:11][c:1]([X:4])[n:10].[c:2][B:5]([OH:6])[OH:7]>>[n:11][c:1]([c:2])[n:10].[B:5][X:4][OH:6][OH:7]'
-    suzuki_coupling_rxn_smarts = '[n:11][c:1]([X:4])[a:10].[c:2][B:5]([OH:6])[OH:7]>>[n:11][c:1]([c:2])[a:10].[B:5][X:4][OH:6][OH:7]'
+    suzuki_coupling_rxn_smarts = '[n:11][c:1]([X:4])[a:10].[c:2][B:5]([O:6])[O:7]>>[n:11][c:1]([c:2])[a:10].[B:5][X:4][O:6][O:7]'
 
     suzuki_coupling_rxn = AllChem.ReactionFromSmarts(suzuki_coupling_rxn_smarts)
 
@@ -53,36 +48,51 @@ def add_dummy_atoms(smiles):
     return list(set([Chem.MolToSmiles(x[0]) for x in products]))
 
 
-result_data = []  # List to store the data
-Chem.MolTo
+if __name__ == "__main__":
 
-# Limit the number of halide rows to 30 and use tqdm to create a progress bar
-for _, halide_row in tqdm(halide_df.iterrows(), total=len(halide_df)):
-    for _, acid_row in acid_df.iterrows():
-        ligand_set = suzuki_couple(acid_row["acid_SMILES"], halide_row["halide_SMILES"])
+    halides_file_name = 'aromatic_halides_with_id.csv'
+    acids_file_name = 'aromatic_boronic_acids_with_id.csv'
 
-        ligands_with_binding_sites = []
-        for ligand_smiles in ligand_set:
-            ligands_with_binding_sites = ligands_with_binding_sites + add_dummy_atoms(ligand_smiles)
+    halide_df = pd.read_csv('input_data/' + halides_file_name)
+    acid_df = pd.read_csv('input_data/' + acids_file_name)
 
-        # If the set is empty, do nothing
-        if not ligands_with_binding_sites:
-            continue
+    result_data = []  # List to store the data
 
-        # Convert each ligand in the set to a row in the DataFrame and append to the list
-        for i, ligand in enumerate(ligands_with_binding_sites):
-            ligand_identifier = halide_row["halide_identifier"] + acid_row["acid_identifier"] + 'L' + hex(i)[2:]
-            result_data.append({
-                "ligand_identifier": ligand_identifier,
-                "ligand_SMILES": ligand,
-                "halide_identifier": halide_row["halide_identifier"],
-                "halide_SMILES": halide_row["halide_SMILES"],
-                "acid_identifier": acid_row["acid_identifier"],
-                "acid_SMILES": acid_row["acid_SMILES"]
-            })
+    # Limit the number of halide rows to 30 and use tqdm to create a progress bar
+    for _, halide_row in tqdm(halide_df.iterrows(), total=len(halide_df)):
+        for _, acid_row in acid_df.iterrows():
+            ligand_set = suzuki_couple(acid_row["acid_SMILES"], halide_row["halide_SMILES"])
 
-# Create the DataFrame using the list of data
-result_df = pd.DataFrame(result_data)
+            ligands_with_binding_sites = []
+            for ligand_smiles in ligand_set:
+                ligands_with_binding_sites = ligands_with_binding_sites + add_dummy_atoms(ligand_smiles)
 
-result_df.to_csv("output_data/combinatorial_ligands.csv", index=False)
+            # If the set is empty, do nothing
+            if not ligands_with_binding_sites:
+                continue
+
+            # Convert each ligand in the set to a row in the DataFrame and append to the list
+            for i, ligand in enumerate(ligands_with_binding_sites):
+                ligand_identifier = halide_row["halide_identifier"] + acid_row["acid_identifier"] + 'L' + hex(i)[2:]
+                result_data.append({
+                    "ligand_identifier": ligand_identifier,
+                    "ligand_SMILES": ligand,
+                    "halide_identifier": halide_row["halide_identifier"],
+                    "halide_SMILES": halide_row["halide_SMILES"],
+                    "acid_identifier": acid_row["acid_identifier"],
+                    "acid_SMILES": acid_row["acid_SMILES"]
+                })
+
+
+
+    # Create the output folder if it doesn't exist
+    output_folder = "output_data"
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+
+    
+    # Create the DataFrame using the list of data
+    result_df = pd.DataFrame(result_data)
+
+    result_df.to_csv("output_data/combinatorial_ligands.csv", index=False)
 
